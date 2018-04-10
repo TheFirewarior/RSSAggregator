@@ -1,0 +1,90 @@
+#include "articlefilter.h"
+
+ArticleFilter::ArticleFilter(DatabaseManager *db, QObject *parent) : QObject(parent), m_db(db)
+{
+    connect(this, SIGNAL(addArticle(ArticleItem)), m_db, SLOT(addArticle(ArticleItem)), Qt::DirectConnection70);
+}
+
+void ArticleFilter::validateArticle(ArticleItem item)
+{
+    m_currentID = item.feed_id;
+    getFilters();
+    if(validateTitle(item.title) && validateCategory(item.category) && validateDescription(item.description) && validateGlobal(item.title, item.description, item.category)) {
+        emit addArticle(item);
+    }
+}
+
+bool ArticleFilter::validateTitle(QString title)
+{
+    if(m_titleKeywords.isEmpty()) return true;
+    QRegularExpression re;
+    foreach(QString regex, m_titleKeywords) {
+        if(regex == "") continue;
+        re.setPattern(regex);
+        qDebug() << "Comparing title to: " << regex;
+        QRegularExpressionMatch match = re.match(title);
+        if(!match.hasMatch()) return false;
+    }
+    return true;
+}
+
+bool ArticleFilter::validateDescription(QString description)
+{
+    if(m_descriptionKeywords.isEmpty()) return true;
+    QRegularExpression re;
+    foreach(QString regex, m_descriptionKeywords) {
+        if(regex == "") continue;
+        re.setPattern(regex);
+        QRegularExpressionMatch match = re.match(description);
+        if(!match.hasMatch()) return false;
+    }
+    return true;
+}
+
+bool ArticleFilter::validateCategory(QString category)
+{
+    if(m_categoryKeywords.isEmpty()) return true;
+    QRegularExpression re;
+    foreach(QString regex, m_categoryKeywords) {
+        if(regex == "") continue;
+        re.setPattern(regex);
+        QRegularExpressionMatch match = re.match(category);
+        if(!match.hasMatch()) return false;
+    }
+    return true;
+}
+
+bool ArticleFilter::validateGlobal(QString title, QString description, QString category)
+{
+    QRegularExpression re;
+    foreach(QString regex, m_globalKeywords) {
+        if(regex == "") continue;
+        re.setPattern(regex);
+        QRegularExpressionMatch match = re.match(title);
+        if(!match.hasMatch()) return false;
+    }
+    foreach(QString regex, m_globalKeywords) {
+        if(regex == "") continue;
+        re.setPattern(regex);
+        QRegularExpressionMatch match = re.match(description);
+        if(!match.hasMatch()) return false;
+    }
+    foreach(QString regex, m_globalKeywords) {
+        if(regex == "") continue;
+        re.setPattern(regex);
+        QRegularExpressionMatch match = re.match(category);
+        if(!match.hasMatch()) return false;
+    }
+    return true;
+}
+
+void ArticleFilter::getFilters()
+{
+    QSqlQuery filters = m_db->getFeedFilter(m_currentID);
+    while(filters.next()) {
+        m_globalKeywords.append(filters.value("global_filter").toString().split("\n"));
+        m_titleKeywords.append(filters.value("title_filter").toString().split("\n"));
+        m_descriptionKeywords.append(filters.value("description_filter").toString().split("\n"));
+        m_categoryKeywords.append(filters.value("category_filter").toString().split("\n"));
+    }
+}

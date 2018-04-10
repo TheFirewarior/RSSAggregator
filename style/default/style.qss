@@ -1,0 +1,8 @@
+QTableView {
+    qproperty-readItemBackground: #EEE;
+}
+MainWindow {
+    qproperty-settingsIcon: url('default/settings.png');
+    qproperty-feedAddIcon: url('default/feed_add.png');
+    qproperty-folderAddIcon: url('default/folder_add.png');
+}
